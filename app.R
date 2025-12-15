@@ -6,6 +6,26 @@ library(Seurat)
 library(ggplot2)
 library(dplyr)
 
+# ---- ここで順序を指定（優先順）----
+my_levels <- c(
+  "64cells",
+  "128cells(early gastrula)",
+  "256cells(early gastrula)",
+  "early blastula",
+  "512cells(mid-blastula)",
+  "mid-blastula",
+  "late blastula",
+  "advanced late blastula",
+  "early gastrula",
+  "slightly advanced early gastrula",
+  "advanced early gastrula",
+  "mid-gastrula",
+  "advanced mid-gastrula",
+  "late gastrula",
+  "end of gastrula",
+  "early neurula"
+)
+
 # -------- ユーティリティ --------
 get_expr_mat <- function(obj, assay = "RNA", expr = "data") {
   z <- try(GetAssayData(obj, assay = assay, layer = expr), silent = TRUE)
@@ -115,13 +135,16 @@ create_pseudotime_plot_multi <- function(
   cols <- c("Xl_L"="#3366ff","Xl_S"="#99b3ff","Xl_other"="#669cff","Pw"="#ffa500","Pw_EU"="#ff9ac2")
   
   if (x_axis == "name") {
-    df$x <- factor(df$name)
+    # —— name 軸は my_levels を最優先に、未掲載カテゴリは末尾へ追加して固定順に
+    levels_use <- c(my_levels, setdiff(unique(df$name), my_levels))
+    df$x <- factor(df$name, levels = levels_use)
+    
     p <- ggplot(df, aes(x = x, y = gene, fill = gene_type)) +
       geom_boxplot(outlier.shape = NA, alpha = 0.6, position = position_dodge(width = 0.7)) +
       geom_jitter(aes(color = gene_type),
                   size = point_size, alpha = 0.6,
                   position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.7)) +
-      scale_x_discrete(drop = FALSE) +
+      scale_x_discrete(limits = levels_use, drop = FALSE) +
       scale_fill_manual(values = cols[levels(df$gene_type)], name = "Type") +
       scale_color_manual(values = cols[levels(df$gene_type)], guide = "none") +
       labs(x = "Stage (name)", y = "Expression") +
